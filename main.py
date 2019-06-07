@@ -7,7 +7,7 @@ import datetime
 from werkzeug.utils import secure_filename
 
 START_FILE = os.getcwd()+'/static/img/'
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+EXTENSION_LIST = set(['png', 'jpg', 'jpeg', 'gif'])
 
 
 app = Flask(__name__)
@@ -23,12 +23,12 @@ def checkUser():
 def encrypt(hash_str):
     return hashlib.sha256(hash_str.encode()).hexdigest()
 
-def allowed_file(filename):
+def extension_list(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+           filename.rsplit('.', 1)[1].lower() in EXTENSION_LIST
 
 def saveFile(file):
-    if file and allowed_file(file.filename):
+    if file and extension_list(file.filename):
         filename = secure_filename(session['user']+file.filename)
         file.save(os.path.join(app.config['START_FILE'], filename))
         return os.path.join("/static/img", filename)
