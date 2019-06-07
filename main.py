@@ -14,18 +14,17 @@ app = Flask(__name__)
 app.secret_key = 'this_is_supposed_to_be_secret'
 app.config['START_FILE'] = START_FILE
 
-conn = pymysql.connect(host='127.0.0.1', user='pricosha', database='PriCoSha')
+conn = pymysql.connect(host='127.0.0.1', user='devapp', database='ios')
 
 def checkUser():
     if 'user' not in session:
-        return redirect(url_for('login',error="you must login to access that page"))
+        return redirect(url_for('login',error="login first"))
 
 def encrypt(hash_str):
     return hashlib.sha256(hash_str.encode()).hexdigest()
 
 def extension_list(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in EXTENSION_LIST
+    return '.' in filename and /filename.rsplit('.', 1)[1].lower() in extension_list
 
 def saveFile(file):
     if file and extension_list(file.filename):
@@ -35,18 +34,18 @@ def saveFile(file):
 
 def getGroups(mail_id):
     cursor = conn.cursor()
-    query = "SELECT owner_email, fg_name FROM belong where mail_id=(%s)"
-    cursor.execute(query,mail_id)
-    groups = cursor.fetchall()
+    query_string = "SELECT owner_email, fg_name FROM belong where mail_id=(%s)"
+    cursor.execute(query_string,mail_id)
+    results_output = cursor.fetchall()
     cursor.close()
-    return groups
+    return results_output
 
 @app.route("/", methods = ["GET", "POST"])
 def index():
     if 'user' in session:
         cursor = conn.cursor()
-        query = "SELECT * FROM tag join contentitem ON (contentitem.item_id = tag.item_id) where email_tagged = (%s) and status = 'Pending'"
-        cursor.execute(query,session['user'])
+        query_string = "SELECT * FROM tag join contentitem ON (contentitem.item_id = tag.item_id) where email_tagged = (%s) and status = 'Pending'"
+        cursor.execute(query_string,session['user'])
         data = cursor.fetchall()
         return render_template("index.html", tag_data = data)
     else:
@@ -143,12 +142,12 @@ def post():
 
 def postContent(email_post,post_time,file_path,item_name,is_pub,groups=[]):
     cursor = conn.cursor()
-    query = 'INSERT INTO `contentitem`(`email_post`,`post_time`,`file_path`,`item_name`,`is_pub`) VALUES(%s,%s,%s,%s,%s)'
-    cursor.execute(query,(email_post,post_time,file_path,item_name,is_pub))
+    query_string = 'INSERT INTO `contentitem`(`email_post`,`post_time`,`file_path`,`item_name`,`is_pub`) VALUES(%s,%s,%s,%s,%s)'
+    cursor.execute(query_string,(email_post,post_time,file_path,item_name,is_pub))
     conn.commit()
     id = cursor.lastrowid
-    query = 'SELECT email_post, post_time, item_name, file_path,item_id FROM contentitem WHERE item_id = (%s)'
-    cursor.execute(query,id)
+    query_string = 'SELECT email_post, post_time, item_name, file_path,item_id FROM contentitem WHERE item_id = (%s)'
+    cursor.execute(query_string,id)
     data = cursor.fetchone()
     counter = 0
     sharedGroup = []
@@ -159,8 +158,8 @@ def postContent(email_post,post_time,file_path,item_name,is_pub,groups=[]):
         else:
             counter+=1
     for shared in sharedGroup:
-        query = 'INSERT INTO `share`(`owner_email`,`fg_name`,`item_id`) VALUES(%s,%s,%s)'
-        cursor.execute(query,(shared[0],shared[1],id))
+        query_string = 'INSERT INTO `share`(`owner_email`,`fg_name`,`item_id`) VALUES(%s,%s,%s)'
+        cursor.execute(query_string,(shared[0],shared[1],id))
         conn.commit()
     cursor.close()
     return data
@@ -206,15 +205,15 @@ def postPrivateBlog():
 def fetchBlogs():
     if 'user' in session:
         cursor = conn.cursor()
-        query = 'SELECT DISTINCT * FROM(SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) UNION all SELECT email_post, post_time, item_name, file_path, item_id FROM belong JOIN share USING(owner_email,fg_name) JOIN contentitem USING(item_id) WHERE email = (%s)) a ORDER BY post_time DESC;'
-        cursor.execute(query,session['user'])
+        query_string = 'SELECT DISTINCT * FROM(SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) UNION all SELECT email_post, post_time, item_name, file_path, item_id FROM belong JOIN share USING(owner_email,fg_name) JOIN contentitem USING(item_id) WHERE email = (%s)) a ORDER BY post_time DESC;'
+        cursor.execute(query_string,session['user'])
         data = cursor.fetchall()
         cursor.close()
         return jsonify({'data':data})
     else:
         cursor = conn.cursor()
-        query = 'SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) order by post_time DESC'
-        cursor.execute(query)
+        query_string = 'SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) order by post_time DESC'
+        cursor.execute(query_string)
         data = cursor.fetchall()
         cursor.close()
         return jsonify({'data':data})
@@ -224,8 +223,8 @@ def fetchBlogs():
 def detailedBlog(item_id):
     cursor = conn.cursor()
     # we need to check if the current user have access to this page or not.
-    query = "SELECT is_pub from contentitem where item_id = (%s)"
-    cursor.execute(query,(item_id))
+    query_string = "SELECT is_pub from contentitem where item_id = (%s)"
+    cursor.execute(query_string,(item_id))
     result = cursor.fetchone()
     if not result:
         return render_template('content.html',item="You don't have access to this blog",tag='', rate='',file='')
@@ -233,8 +232,8 @@ def detailedBlog(item_id):
     if data == 0:
         user = ''
         if 'user' in session:
-            query = "SELECT fg_name, owner_email from contentitem JOIN share using (item_id) JOIN belong using(owner_email,fg_name) where item_id = (%s) and email = (%s)"
-            cursor.execute(query,(item_id,session['user']))
+            query_string = "SELECT fg_name, owner_email from contentitem JOIN share using (item_id) JOIN belong using(owner_email,fg_name) where item_id = (%s) and email = (%s)"
+            cursor.execute(query_string,(item_id,session['user']))
             user = cursor.fetchone()
         else:
             return redirect(url_for('login',error="It's a private blog, you must login first"))
@@ -286,8 +285,8 @@ def groupFetch():
     print('fetching');
     if 'user' in session:
         cursor = conn.cursor()
-        query = 'select belong.fg_name,friendgroup.description,belong.owner_email from belong join friendgroup using(owner_email,fg_name) where belong.email = (%s)'
-        cursor.execute(query,session['user'])
+        query_string = 'select belong.fg_name,friendgroup.description,belong.owner_email from belong join friendgroup using(owner_email,fg_name) where belong.email = (%s)'
+        cursor.execute(query_string,session['user'])
         data = cursor.fetchall()
         cursor.close()
         return jsonify({'data':data,'user':session['user']})
@@ -473,18 +472,18 @@ def comment(item_id):
     cursor = conn.cursor()
     if request.method == 'POST':
         content = request.form['comment']
-        query = "INSERT into `comment`(`mail_id`, `comment`, `item_id`) Values (%s,%s,%s)"
-        cursor.execute(query,(session['user'],content,item_id))
+        query_string = "INSERT into `comment`(`mail_id`, `comment`, `item_id`) Values (%s,%s,%s)"
+        cursor.execute(query_string,(session['user'],content,item_id))
         conn.commit()
-        query = "SELECT fname, lname FROM Person where mail_id=(%s)"
-        cursor.execute(query,(session['user']))
+        query_string = "SELECT fname, lname FROM Person where mail_id=(%s)"
+        cursor.execute(query_string,(session['user']))
         name = cursor.fetchone()
         cursor.close()
         return jsonify({'name':name,'comment':content})
     elif request.method == 'GET':
         print("hahah")
-        query = "SELECT DISTINCT fname,lname,comment,mail_id FROM comment JOIN person USING(mail_id) where item_id=(%s)"
-        cursor.execute(query,(item_id))
+        query_string = "SELECT DISTINCT fname,lname,comment,mail_id FROM comment JOIN person USING(mail_id) where item_id=(%s)"
+        cursor.execute(query_string,(item_id))
         data = cursor.fetchall()
         cursor.close()
         return jsonify({'data':data})
@@ -643,11 +642,11 @@ def renderGallery():
 def gallery():
     pointer = conn.cursor()
     if 'user' in session:
-        query = "SELECT DISTINCT file_path FROM contentItem JOIN share USING(item_id) JOIN belong ON(belong.owner_email = share.owner_email AND belong.fg_name = share.fg_name) WHERE belong.mail_id = (%s) UNION all SELECT DISTINCT file_path FROM contentItem where is_pub = true"
-        pointer.execute(query,session['user'])
+        query_string = "SELECT DISTINCT file_path FROM contentItem JOIN share USING(item_id) JOIN belong ON(belong.owner_email = share.owner_email AND belong.fg_name = share.fg_name) WHERE belong.mail_id = (%s) UNION all SELECT DISTINCT file_path FROM contentItem where is_pub = true"
+        pointer.execute(query_string,session['user'])
     else:
-        query = "SELECT file_path FROM contentItem where is_pub = true"
-        pointer.execute(query)
+        query_string = "SELECT file_path FROM contentItem where is_pub = true"
+        pointer.execute(query_string)
     results = pointer.fetchall()
     return jsonify({'results':results})
 
