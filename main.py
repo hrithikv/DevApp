@@ -467,29 +467,29 @@ def deFriendWithEmail():
     return jsonify({"failed":message})
 
 
-@app.route("/post/blog/<item_id>/comment",methods=['GET','POST'])
-def comment(item_id):
+@app.route("/post/blog/<item_id>/type",methods=['GET','POST'])
+def type(item_id):
     cursor = conn.cursor()
     if request.method == 'POST':
-        content = request.form['comment']
-        query_string = "INSERT into `comment`(`mail_id`, `comment`, `item_id`) Values (%s,%s,%s)"
+        content = request.form['type']
+        query_string = "INSERT into `type`(`mail_id`, `type`, `item_id`) Values (%s,%s,%s)"
         cursor.execute(query_string,(session['user'],content,item_id))
         conn.commit()
         query_string = "SELECT fname, lname FROM Person where mail_id=(%s)"
         cursor.execute(query_string,(session['user']))
         name = cursor.fetchone()
         cursor.close()
-        return jsonify({'name':name,'comment':content})
+        return jsonify({'name':name,'type':content})
     elif request.method == 'GET':
         print("hahah")
-        query_string = "SELECT DISTINCT fname,lname,comment,mail_id FROM comment JOIN person USING(mail_id) where item_id=(%s)"
+        query_string = "SELECT DISTINCT fname,lname,type,mail_id FROM type JOIN person USING(mail_id) where item_id=(%s)"
         cursor.execute(query_string,(item_id))
         data = cursor.fetchall()
         cursor.close()
         return jsonify({'data':data})
 
-@app.route("/post/blog/<item_id>/tag",methods=['GET','POST'])
-def posttag(item_id):
+@app.route("/post/blog/<item_id>/post_tag",methods=['GET','POST'])
+def post_tag(item_id):
     cursor = conn.cursor()
     if request.method == 'POST':
         content = request.form['tag']
