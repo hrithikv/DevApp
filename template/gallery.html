@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>DevApp | Gallery</title>
+    <link href="{{ url_for('static',filename='vendor/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-bright bg-bright static-top">
+      <div class="container">
+        <a class="navbar-brand" href="#">DevApp</a>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('index')}}">home</a>
+            </li>
+            <li class="nav-item active">
+              <a class="nav-link" href="{{url_for('post')}}">post</a>
+            </li>
+            {% if 'user' not in session %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('log in')}}">log in</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('sign up')}}">sign up</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('Data storage')}}">your groups</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('log out')}}">logout</a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="row" style="display:flex;flex-wrap:wrap;padding: 0 4px;">
+        <div class="col" style="max-width: 25%;flex:25%;padding: 0 4px" id="0"></div>
+        <div class="col" style="max-width: 25%;flex:25%;padding: 0 4px" id="1"></div>
+        <div class="col" style="max-width: 25%;flex:25%;padding: 0 4px" id="2"></div>
+        <div class="col" style="max-width: 25%;flex:25%;padding: 0 4px" id="3"></div>
+    </div>
+    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
+    <script>
+        $.ajax({
+            type:"GET",
+            url:"/post/gallery",
+            success:function(info){
+                var counter = 0;
+                for(var i = 0; i < info.data.length; i++){
+                    if(info.data[i]!='none'){
+                        var img = "<img src='" + info.data[i] + "' style='margin-top:16px;vertical-align: low;width:90%'>"
+                        $("#"+String((i-counter)%8)).append(img)
+                    }else{
+                        counter+=1;
+                    }
+                }
+            },
+            error:function(err){
+                alert('err');
+            },
+        });
+    </script>
+</body>
+</html>
