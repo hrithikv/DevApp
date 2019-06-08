@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>DevApp</title>
+    <link href="{{ url_for('static',filename='vendor/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+    <div class="container">
+        <a class="navbar-brand" href="#">DevApp</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
+            aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('index')}}">home</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{url_for('post')}}">post</a>
+                </li>
+                {% if 'user' not in session %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('login')}}">log in</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('signup')}}">sign up</a>
+                </li>
+                {% endif %}
+                {% if 'user' in session %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('GroupManagement')}}">your groups</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('logout')}}">logout</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div id="askEmailTag" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 id="myModalLabel">Please be more specific on who do you want to Tag</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            </div>
+            <div class="modal-body">
+                <p>You can Tag following people: </p>
+                <div class="modal-body">
+                    <div id="emailList"></div>
+                </div>
+                <input id = "tag-using-Email" style="margin-top:2px;" class="form-control" type="text" id="email" name="emailID" placeholder="Please input email here" required/>
+            </div>
+                <button class="btn btn-outline-dark mb-2" style="width:100%" onclick="TagFriendWithEmail()">Tag</button>
+        </div>
+    </div>
+</div>
+
+<center>
+    {% if item!="False" %}
+    {{ item[4] }}
+    <br>
+
+    {% if file!='none' %}
+    <img src={{file}} style="display: block;max-width: 500px;max-height: 500px;width: auto;height: auto" alt="userFile">
+    {% endif %}
+    <br>
+    posted by {{ item[1] }}
+
+    {% if tag %}
+        tags:
+            {% for t in tag %}
+                {{ t[1] }} @ {{ t[0] }}<br>
+            {% endfor %}
+    {% endif %}
+    {% if rate %}
+        rates:
+            {% for r in rate %}
+                {{ r }}<br>
+            {% endfor %}
+    {% endif %}
+    <br>
+    {% if 'user' in session %}
+        <button id="comment">comment</button>
+        <button id="tag">tag</button>
+        <div id="tagArea"></div>
+        <div id="commentArea"></div>
+    {% endif %}
+    {% if 'user' not in session %}
+        you must <a href="{{url_for('login')}}">log in</a> to post a comment
+    {% endif %}
+    <div id="userComments"></div>
+    <div class="list-group" style="width:50%;min-width: 400px" id="posts"></div>
+    {% else %}
+    You don't have access to this post
+    {% endif %}
+</center>
+    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
+    <script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+    <script>
+        $("#tag").on('click',function(){
+            var input = "<button onclick='cancelTag()'>cancel</button><input id='tagInput' placeholder='e.g. @Kyle Li' name='tag'></input><button onclick='postTag()'>Tag!</button";
+            $("#tagArea").append(input);
+            $("#tag").css("display","none");
+        });
+        $("#comment").on('click',function(){
+            var input = "<button onclick='cancel()'>cancel</button><input id='commentInput' placeholder='comment' name='comment'></input><button onclick='post()'>post</button>"
+            $("#commentArea").append(input);
+            $("#comment").css("display","none");
+        });
+        function commentSpan(fname,lname,comment){
+            var span = "<span>"+lname+","+fname+" : "+comment+"</span><br>";
+            $("#userComments").append(span);
+        };
+        $.ajax({
+            type: "GET",
+            url:window.location.pathname + "/comment",
+            success:function(info){
+                for (var i = 0; i < info.data.length; i++) {
+                    var comment = info.data[i];
+                    commentSpan(comment[0],comment[1],comment[2]);
+                }
+            },
+            error:function(err){alert('sth went wrong');},
+        })
+        function cancelTag(){
+            $("#tagArea").empty();
+            $("#tag").css("display","inline-block");
+        };
+        function cancel(){
+            $("#commentArea").empty();
+            $("#comment").css("display","inline-block");
+        };
+        function postTag(){
+            var tag = $("#tagInput").val();
+            $.ajax({
+                type: "POST",
+                url: window.location.pathname + "/tag",
+                data:{'tag':tag},
+                success:function(info){
+                    alert(info.msg);
+                    if((info.dup_name == true)&(info.repeated == false)){
+                    $("#emailList").empty();
+                    for(var i = 0; i < info.dup_id.length; i++){
+                        var data = info.dup_id[i][0];
+                        var para = "<p>" + data + "</p>";
+                        $("#emailList").append(para)
+                      }
+                      $("#askEmailTag").modal('show');
+                }
+              },
+                error:
+                function(err){alert('sth went wrong');},
+            });
+            cancelTag();
+        };
+        function TagFriendWithEmail(){
+          var tag = $("#tag-using-Email").val();
+          $.ajax({
+            type: "POST",
+            url: window.location.pathname + "/tagEmail",
+            data:{'tag':tag},
+            success:function(msg){
+            alert(msg)
+            },
+            function(error):
+        });
+        cancelTag();
+      };
+        function post(){
+            var comment = $("#commentInput").val();
+            $.ajax({
+                type: "POST",
+                url: window.location.pathname + "/comment",
+                data: {'comment':comment,},
+                success: function(info){
+                    commentSpan(info.name[0],info.name[1],info.comment);
+                },
+                error: function(err){
+                    alert("Done.");
+                },
+            });
+            cancel();
+        };
+    </script>
+</body>
+</html>
