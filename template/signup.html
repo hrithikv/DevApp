@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>DevApp</title>
+    <link href="{{ url_for('static',filename='vendor/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static',filename='dmain.css')}}">
+
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">DevApp</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
+                aria-controls="navbarResponsive" aria-expanded="true" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{url_for('index')}}">home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{url_for('post')}}">post</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{url_for('log in')}}">log in</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="{{url_for('sign up')}}">sign up
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% if errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <center>
+        {{ errors }}
+        </center>
+        <button type="button" class="close" aria-label="close" onclick="hideAlert()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    {% endif %}
+
+    <div id="form-div">
+        <form action="/signup/user" method="POST">
+            <h6>Sign Up here</h6>
+            <div class="input-group form-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="">Name</span>
+                </div>
+                <input type="text" class="form-control" name="first_name" placeholder="first_name" required>
+                <input type="text" class="form-control" name="last_name" placeholder="last_name" required>
+            </div>
+            <div class="form-group">
+                <input type="email" class="form-control" id="mail_id" name="mail_id" placeholder="Enter the email" required>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" id="password" name="password" placeholder="pwd" required>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" id="pwd_2" name="pwd_2" placeholder="pwd" required>
+            </div>
+        <button type="submit" class="btn btn-primary" id="signUpBtn">Sign Up</button>
+        </form>
+    </div>
+
+    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
+    <script>
+        function hideAlert(){$(".alert").hide();
+        }
+    </script>
+</body>
+
+</html>
