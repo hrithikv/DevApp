@@ -34,7 +34,7 @@ def saveFile(file):
 
 def getGroups(mail_id):
     cursor = conn.cursor()
-    query_string = "SELECT owner_email, fg_name FROM belong where mail_id=(%s)"
+    query_string = "SELECT owner_email, foreground_name FROM belong where mail_id=(%s)"
     cursor.execute(query_string,mail_id)
     results_output = cursor.fetchall()
     cursor.close()
@@ -46,8 +46,8 @@ def index():
         cursor = conn.cursor()
         query_string = "SELECT * FROM tag join contentitem ON (contentitem.item_id = tag.item_id) where email_tagged = (%s) and status = 'Pending'"
         cursor.execute(query_string,session['user'])
-        data = cursor.fetchall()
-        return render_template("index.html", tag_data = data)
+        store = cursor.fetchall()
+        return render_template("index.html", tag_data = store)
     else:
         return render_template("index.html")
 
@@ -55,7 +55,7 @@ def index():
 @app.route("/tag", methods = ["POST"])
 def tag():
     cursor = conn.cursor()
-    tag_key = request.form.getlist('data[]')
+    tag_key = request.form.getlist('store[]')
     status = tag_key[3]
     tagger = tag_key[2]
     taggee = tag_key[1]
@@ -78,14 +78,14 @@ def login():
 @app.route("/login/user",methods=['GET','POST'])
 def loginUser():
     mail_id = request.form["mail_id"]
-    pwd = request.form["pwd"]
+    password = request.form["password"]
     cursor = conn.cursor()
     sql = "SELECT * FROM Person WHERE mail_id=(%s) AND password=(%s)"
-    cursor.execute(sql,(mail_id,encrypt(pwd)))
-    data = cursor.fetchone()
+    cursor.execute(sql,(mail_id,encrypt(password)))
+    store = cursor.fetchone()
     cursor.close()
     error = None
-    if(data):
+    if(store):
         session['user'] = mail_id
         return redirect(url_for('post'))
     else:
@@ -100,13 +100,13 @@ def signup():
 # Sign up users
 @app.route("/signup/user",methods=['GET','POST'])
 def signUpUser():
-    fname = request.form["fname"]
-    lname = request.form["lname"]
+    first_name = request.form["first_name"]
+    last_name = request.form["last_name"]
     mail_id = request.form["mail_id"]
-    pwd = request.form["pwd"]
-    secPwd = request.form["2pwd"]
+    password = request.form["password"]
+    secpassword = request.form["2password"]
     result = None
-    if pwd != secPwd:
+    if password != secpassword:
         message = "Passwords should match"
         return redirect(url_for('signup',error=message))
     if len(mail_id) > 20:
@@ -119,9 +119,9 @@ def signUpUser():
         result = cursor.fetchone()
     finally:
         if not result:
-            pwd = encrypt(pwd)
-            sql = "INSERT INTO `person` (`mail_id`,`password`,`fname`,`lname`) VALUES (%s,%s,%s,%s)"
-            cursor.execute(sql,(mail_id,pwd,fname,lname))
+            password = encrypt(password)
+            sql = "INSERT INTO `person` (`mail_id`,`password`,`first_name`,`last_name`) VALUES (%s,%s,%s,%s)"
+            cursor.execute(sql,(mail_id,password,first_name,last_name))
             conn.commit()
             cursor.close()
             session['user'] = mail_id
@@ -148,7 +148,7 @@ def postContent(email_post,post_time,file_path,item_name,is_pub,groups=[]):
     id = cursor.lastrowid
     query_string = 'SELECT email_post, post_time, item_name, file_path,item_id FROM contentitem WHERE item_id = (%s)'
     cursor.execute(query_string,id)
-    data = cursor.fetchone()
+    store = cursor.fetchone()
     counter = 0
     sharedGroup = []
     for shared in groups:
@@ -158,11 +158,11 @@ def postContent(email_post,post_time,file_path,item_name,is_pub,groups=[]):
         else:
             counter+=1
     for shared in sharedGroup:
-        query_string = 'INSERT INTO `share`(`owner_email`,`fg_name`,`item_id`) VALUES(%s,%s,%s)'
+        query_string = 'INSERT INTO `share`(`owner_email`,`foreground_name`,`item_id`) VALUES(%s,%s,%s)'
         cursor.execute(query_string,(shared[0],shared[1],id))
         conn.commit()
     cursor.close()
-    return data
+    return store
 
 # Posting a blog
 @app.route("/post/posting/public",methods=['POST'])
@@ -174,12 +174,12 @@ def postBlog():
         upload_file = request.files['file']
         content = request.form["content"]
         file_path = saveFile(upload_file)
-        data = postContent(session['user'],timestamp,file_path,content,is_pubB)
-        return jsonify({'data':data})
+        store = postContent(session['user'],timestamp,file_path,content,is_pubB)
+        return jsonify({'store':store})
     except:
         content = request.form["content"]
-        data = postContent(session['user'], timestamp, 'none', content, is_pubB)
-        return jsonify({'data':data})
+        store = postContent(session['user'], timestamp, 'none', content, is_pubB)
+        return jsonify({'store':store})
 
 @app.route("/post/posting/private",methods=['POST'])
 def postPrivateBlog():
@@ -193,11 +193,11 @@ def postPrivateBlog():
     try:
         upload_file = request.files['file']
         file_path = saveFile(upload_file)
-        data = postContent(session['user'],timestamp,file_path,content,is_pubB,groups)
-        return jsonify({'data':data})
+        store = postContent(session['user'],timestamp,file_path,content,is_pubB,groups)
+        return jsonify({'store':store})
     except:
-        data = postContent(session['user'],timestamp,'none',content,is_pubB,groups)
-        return jsonify({'data':data})
+        store = postContent(session['user'],timestamp,'none',content,is_pubB,groups)
+        return jsonify({'store':store})
 
 
 # Fetching the viewable blogs
@@ -207,16 +207,16 @@ def fetchBlogs():
         cursor = conn.cursor()
         query_string = 'SELECT DISTINCT * FROM(SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) UNION all SELECT email_post, post_time, item_name, file_path, item_id FROM belong JOIN share USING(owner_email,fg_name) JOIN contentitem USING(item_id) WHERE email = (%s)) a ORDER BY post_time DESC;'
         cursor.execute(query_string,session['user'])
-        data = cursor.fetchall()
+        store = cursor.fetchall()
         cursor.close()
-        return jsonify({'data':data})
+        return jsonify({'store':store})
     else:
         cursor = conn.cursor()
         query_string = 'SELECT email_post, post_time, item_name, file_path, item_id FROM contentitem WHERE is_pub = true AND post_time>=DATE_SUB(NOW(), INTERVAL 1 DAY) order by post_time DESC'
         cursor.execute(query_string)
-        data = cursor.fetchall()
+        store = cursor.fetchall()
         cursor.close()
-        return jsonify({'data':data})
+        return jsonify({'store':store})
 
 # Fetching detailed info of a specific blog
 @app.route("/post/blog/<item_id>")
@@ -228,11 +228,11 @@ def detailedBlog(item_id):
     result = cursor.fetchone()
     if not result:
         return render_template('content.html',item="You don't have access to this blog",tag='', rate='',file='')
-    data = int(result[0])
-    if data == 0:
+    store = int(result[0])
+    if store == 0:
         user = ''
         if 'user' in session:
-            query_string = "SELECT fg_name, owner_email from contentitem JOIN share using (item_id) JOIN belong using(owner_email,fg_name) where item_id = (%s) and email = (%s)"
+            query_string = "SELECT foreground_name, owner_email from contentitem JOIN share using (item_id) JOIN belong using(owner_email,foreground_name) where item_id = (%s) and email = (%s)"
             cursor.execute(query_string,(item_id,session['user']))
             user = cursor.fetchone()
         else:
@@ -246,10 +246,10 @@ def detailedBlog(item_id):
     content = cursor.fetchone()
 
     # taggee of a post
-    tag = 'SELECT fname,lname FROM person JOIN Tag ON (Tag.email_tagged = person.email) WHERE Tag.item_id = (%s) AND Tag.status=true'
+    tag = 'SELECT first_name,last_name FROM person JOIN Tag ON (Tag.email_tagged = person.email) WHERE Tag.item_id = (%s) AND Tag.status=true'
     cursor.execute(tag,item_id)
     taggee = cursor.fetchall()
-    tagger = 'SELECT fname,lname FROM person JOIN Tag ON (Tag.email_tagger = person.email) WHERE Tag.item_id = (%s) AND Tag.status=true'
+    tagger = 'SELECT first_name,last_name FROM person JOIN Tag ON (Tag.email_tagger = person.email) WHERE Tag.item_id = (%s) AND Tag.status=true'
     cursor.execute(tagger,item_id)
     tagger = cursor.fetchall()
     tag = [taggee,tagger]
@@ -285,11 +285,11 @@ def groupFetch():
     print('fetching');
     if 'user' in session:
         cursor = conn.cursor()
-        query_string = 'select belong.fg_name,friendgroup.description,belong.owner_email from belong join friendgroup using(owner_email,fg_name) where belong.email = (%s)'
+        query_string = 'select belong.foreground_name,friendgroup.details,belong.owner_email from belong join friendgroup using(owner_email,foreground_name) where belong.email = (%s)'
         cursor.execute(query_string,session['user'])
-        data = cursor.fetchall()
+        store = cursor.fetchall()
         cursor.close()
-        return jsonify({'data':data,'user':session['user']})
+        return jsonify({'store':store,'user':session['user']})
     else:
         message = "You need to log in first"
         return redirect(url_for('login',error=message))
@@ -297,76 +297,71 @@ def groupFetch():
 @app.route("/groups/create",methods=['GET','POST'])
 def createGroup():
     cursor = conn.cursor()
-    fg_name = request.form['groupname']
-    description = request.form['description']
+    foreground_name = request.form['groupname']
+    details = request.form['details']
     result = None
     try:
-        sql = "select * from friendgroup where owner_email = (%s) and fg_name = (%s)"
-        cursor.execute(sql, (session['user'],fg_name))
+        sql = "select * from friendgroup where owner_email = (%s) and foreground_name = (%s)"
+        cursor.execute(sql, (session['user'],foreground_name))
         result = cursor.fetchone()
     finally:
         if not result:
-            sql = "insert into friendgroup(owner_email, fg_name, description) Values (%s,%s,%s)"
-            cursor.execute(sql, (session['user'], fg_name, description))
-            sql = "insert into belong(mail_id, owner_email, fg_name) Values (%s,%s,%s)"
-            cursor.execute(sql, (session['user'], session['user'], fg_name))
+            sql = "insert into friendgroup(owner_email, foreground_name, details) Values (%s,%s,%s)"
+            cursor.execute(sql, (session['user'], foreground_name, details))
+            sql = "insert into belong(mail_id, owner_email, foreground_name) Values (%s,%s,%s)"
+            cursor.execute(sql, (session['user'], session['user'], foreground_name))
             conn.commit()
             cursor.close()
-            return jsonify({'fg_name': fg_name, 'owner':session['user'], 'description': description})
+            return jsonify({'foreground_name': foreground_name, 'owner':session['user'], 'details': details})
         else:
             message = "Group Already Exist"
             return redirect(url_for('GroupManagement', error=message))
-    # Return statement is for updating UI using AJAX
-    return jsonify({'name':fg_name, 'description':description})
-            #return redirect(url_for('GroupManagement',error=message))
+    return jsonify({'name':foreground_name, 'details':details})
 
 
 
 @app.route("/groups/friendAdd", methods=['POST'])
 def addFriend():
     cursor = conn.cursor()
-    fName = request.form['firstName']
-    lName = request.form['lastName']
-    fg_name = request.form['fg_name']
-    print("in addFriend")
-
-    '''# of people with such name not in group'''
-    sqlCount = "select count(*) from (select mail_id from person where fname = (%s) and lname = (%s)"
-    cursor.execute(sqlCount, (fName,lName, session['user'], fg_name))
+    first_name = request.form['firstName']
+    last_name = request.form['lastName']
+    foreground_name = request.form['foreground_name']
+    sqlCount = "select count(*) from (select mail_id from person where first_name = (%s) and last_name = (%s)"
+    cursor.execute(sqlCount, (first_name,last_name, session['user'], foreground_name))
     count = cursor.fetchone()
-    count = count[0] # reformat count
+    count = count[0]
     print("Count: ", count)
 
-    sqlEmail = "select mail_id from person where fname = (%s) and lname = (%s) and mail_id Not In (select mail_id from belong where owner_email = (%s) and fg_name = (%s))"
-    cursor.execute(sqlEmail, (fName, lName, session['user'], fg_name))
-    friendID = cursor.fetchall()
-    print("FriendID: ", friendID)
+    sqlEmail = "select mail_id from person where first_name = (%s) and last_name = (%s) and mail_id Not In (select mail_id from belong where owner_email = (%s) and fg_name = (%s))"
+    cursor.execute(sqlEmail, (first_name, last_name, session['user'], foreground_name))
+    token = cursor.fetchall()
+    print("FriendID: ", token)
 
-    sqlAlreadyIn = "select * from belong Natural join person where fname=(%s) and lname=(%s) and owner_email=(%s) and fg_name=(%s)"
-    cursor.execute(sqlAlreadyIn,(fName,lName, session['user'], fg_name))
+    sqlAlreadyIn = "select * from belong Natural join person where first_name=(%s) and last_name=(%s) and owner_email=(%s) and foreground_name=(%s)"
+    cursor.execute(sqlAlreadyIn,(first_name,last_name, session['user'], foreground_name))
     alreadyIn = cursor.fetchall()
 
     if count > 1:
-        return jsonify({"dup": friendID})
+        return jsonify({"dup": token})
 
     if count == 1:
         print("not in")
-        friendID = friendID[0]
-        sqlInsert = "insert into belong (mail_id, owner_email, fg_name) values (%s, %s, %s)"
-        cursor.execute(sqlInsert, (friendID, session['user'], fg_name))
+        token = token[0]
+        sqlInsert = "insert into belong (mail_id, owner_email, foreground_name) values (%s, %s, %s)"
+        cursor.execute(sqlInsert, (token, session['user'], foreground_name))
         conn.commit()
         cursor.close()
-        message ="Congratulation! user " + fName + " " + lName +" SUCCESSFULLY added!"
+        message ="Congratulation! user " + first_name + " " + last_name +" SUCCESSFULLY added!"
         return jsonify({"added":message})
 
     if alreadyIn:
-        message = "user " + fName + " " + lName + " is already in this group"
+        message = "user " + first_name + " " + last_name + " is already in this group"
         print("AlreadyIn")
         cursor.close()
         return jsonify({"alreadyIn": message})
 
     if count == 0:
-        message = "there is no such a user with name " + fName + " " + lName
+        message = "there is no such a user with name " + first_name + " " + last_name
         cursor.close()
         return jsonify({"noUser":message})
 
@@ -375,92 +370,82 @@ def addFriend():
 
 @app.route("/groups/friendAddWithEmail", methods = ['POST'])
 def addFriendWithEmail():
-    print("in addFriendWithEmail")
     cursor = conn.cursor()
-    fName = request.form['firstName']
-    lName = request.form['lastName']
-    fg_name = request.form['fg_name']
+    first_name = request.form['firstName']
+    last_name = request.form['lastName']
+    foreground_name = request.form['foreground_name']
     mail_id = request.form['mail_id']
-    print(fName, lName)
+    print(first_name, last_name)
 
-    sqlCheck = "select mail_id from person where fname =(%s) and lname = (%s)"
-    cursor.execute(sqlCheck, (fName, lName, session['user'], fg_name))
+    sqlCheck = "select mail_id from person where first_name =(%s) and last_name = (%s)"
+    cursor.execute(sqlCheck, (first_name, last_name, session['user'], foreground_name))
     available = cursor.fetchall()
     for i in range(len(available)):
         if available[i][0] == mail_id: # a valid input
-            sqlInsert = "insert into belong (mail_id, owner_email, fg_name) values (%s, %s, %s)"
-            cursor.execute(sqlInsert, (mail_id, session['user'], fg_name))
+            sqlInsert = "insert into belong (mail_id, owner_email, foreground_name) values (%s, %s, %s)"
+            cursor.execute(sqlInsert, (mail_id, session['user'], foreground_name))
             conn.commit()
             cursor.close()
-            message = "Congratulation! user " + fName + " " + lName + " SUCCESSFULLY added!"
+            message = "Congratulation! user " + first_name + " " + last_name + " SUCCESSFULLY added!"
             return jsonify({"added": message})
-    message = "Invalid Email. Be careful PLEASE!"
+    message = "Invalid Email"
     cursor.close()
     return jsonify({"failed":message})
 
-@app.route("/groups/defriend", methods=['DELETE'])
-def deFriend():
+@app.route("/groups/removefriend", methods=['DELETE'])
+def removefriend():
     cursor = conn.cursor()
-    fName = request.form['firstName']
-    lName = request.form['lastName']
-    fg_name = request.form['fg_name']
-    
-    sqlCount = "select count(mail_id) from person natural join belong where fname = (%s) and lname = (%s) and owner_email = (%s) and fg_name=(%s) and email not in (%s)"
-    cursor.execute(sqlCount, (fName,lName, session["user"], fg_name, session['user']))
+    first_name = request.form['firstName']
+    last_name = request.form['lastName']
+    foreground_name = request.form['foreground_name']
+    sqlCount = "select count(mail_id) from person natural join belong where first_name = (%s) and last_name = (%s) and owner_email = (%s) and foreground_name=(%s) and email not in (%s)"
+    cursor.execute(sqlCount, (first_name,last_name, session["user"], foreground_name, session['user']))
     count = cursor.fetchone()
-    count = count[0] # reformat count
+    count = count[0]
     print("count: ",count)
-    sqlEmail = "select email from person natural join belong where fname = (%s) and lname = (%s) and owner_email = (%s) and fg_name=(%s) and email not in (%s)"
-    cursor.execute(sqlEmail, (fName, lName, session["user"], fg_name, session["user"]))
-    friendID = cursor.fetchall()
-    print("FINAL STEP??? of course not")
+    sqlEmail = "select email from person natural join belong where first_name = (%s) and last_name = (%s) and owner_email = (%s) and foreground_name=(%s) and email not in (%s)"
+    cursor.execute(sqlEmail, (first_name, last_name, session["user"], foreground_name, session["user"]))
+    token = cursor.fetchall()
     if count == 0:
         print("0")
-        message = "there is no such a user with name " + fName + " " + lName + " in this group. btw, you can't delete youself"
         cursor.close()
         return jsonify({"noUser":message})
-    sqlAlreadyIn = "select fname, lname, mail_id from belong Natural join person where fname=(%s) and lname=(%s) and owner_email=(%s) and fg_name=(%s)"
-    cursor.execute(sqlAlreadyIn,(fName,lName, session['user'], fg_name))
+    sqlAlreadyIn = "select first_name, last_name, mail_id from belong Natural join person where first_name=(%s) and last_name=(%s) and owner_email=(%s) and foreground_name=(%s)"
+    cursor.execute(sqlAlreadyIn,(first_name,last_name, session['user'], foreground_name))
     alreadyIn = cursor.fetchall()
     if count == 1:
-        print("1")
-        print("User is In")
-        if friendID[0][0] == session["user"]:
-            print("suicide")
-            message = "You can't do that! You are the Master of this group!"
+        if token[0][0] == session["user"]:
             cursor.close()
-            return jsonify({"suicide":message})
-        friendID = friendID[0][0]
-        sqlDelete = "delete from belong where mail_id = (%s) and owner_email = (%s) and fg_name = (%s)"
-        cursor.execute(sqlDelete, (friendID, session['user'], fg_name))
+            return
+        token = token[0][0]
+        deleteNow = "delete from belong where mail_id = (%s) and owner_email = (%s) and foreground_name = (%s)"
+        cursor.execute(deleteNow, (token, session['user'], foreground_name))
         conn.commit()
         cursor.close()
-        message ="All Right! user " + fName + " " + lName +" SADLY deleted!"
+        message ="user " + first_name + " " + last_name +" removed"
         return jsonify({"deleted":message})
     else:
-        return jsonify({"dup":friendID})
+        return jsonify({"dup":token})
 
-@app.route("/groups/friendDeleteWithEmail", methods = ['Delete'])
-def deFriendWithEmail():
-    print("in Delete FriendWithEmail")
+@app.route("/groups/removefriendwithemail", methods = ['Delete'])
+def removefriendwithemail():
     cursor = conn.cursor()
-    fName = request.form['firstName']
-    lName = request.form['lastName']
-    fg_name = request.form['fg_name']
+    first_name = request.form['firstName']
+    last_name = request.form['lastName']
+    foreground_name = request.form['foreground_name']
     mail_id = request.form['mail_id']
-    print(fName, lName)
-    sqlCheck = "select mail_id from person natural join belong where fname = (%s) and lname = (%s) and owner_email = (%s) and fg_name=(%s) and email not in (%s)"
-    cursor.execute(sqlCheck, (fName, lName, session['user'], fg_name, session['user']))
+    print(first_name, last_name)
+    sqlCheck = "select mail_id from person natural join belong where first_name = (%s) and last_name = (%s) and owner_email = (%s) and foreground_name=(%s) and email not in (%s)"
+    cursor.execute(sqlCheck, (first_name, last_name, session['user'], foreground_name, session['user']))
     available = cursor.fetchall()
     print("Given: ", mail_id)
     for i in range(len(available)):
-        print("checking ", available[i][0])
         if available[i][0] == mail_id:
-            sqlInsert = "delete from belong where mail_id = (%s) and owner_email = (%s) and fg_name = (%s)"
-            cursor.execute(sqlInsert, (mail_id, session['user'], fg_name))
+            sqlInsert = "delete FROM belong where mail_id = (%s) and owner_email = (%s)"
+            cursor.execute(sqlInsert, (mail_id, session['user'], foreground_name))
             conn.commit()
             cursor.close()
-            message = "All Right! user " + fName + " " + lName +" SADLY deleted!"
+            message = "user " + first_name + " " + last_name + "removed"
             return jsonify({"deleted": message})
     message = "Invalid Email. Be careful PLEASE!"
     cursor.close()
@@ -475,18 +460,18 @@ def type(item_id):
         query_string = "INSERT into `type`(`mail_id`, `type`, `item_id`) Values (%s,%s,%s)"
         cursor.execute(query_string,(session['user'],content,item_id))
         conn.commit()
-        query_string = "SELECT fname, lname FROM Person where mail_id=(%s)"
+        query_string = "SELECT first_name, last_name FROM Person where mail_id=(%s)"
         cursor.execute(query_string,(session['user']))
         name = cursor.fetchone()
         cursor.close()
         return jsonify({'name':name,'type':content})
     elif request.method == 'GET':
         print("hahah")
-        query_string = "SELECT DISTINCT fname,lname,type,mail_id FROM type JOIN person USING(mail_id) where item_id=(%s)"
+        query_string = "SELECT DISTINCT first_name,last_name,type,mail_id FROM type JOIN person USING(mail_id) where item_id=(%s)"
         cursor.execute(query_string,(item_id))
-        data = cursor.fetchall()
+        store = cursor.fetchall()
         cursor.close()
-        return jsonify({'data':data})
+        return jsonify({'store':store})
 
 @app.route("/post/blog/<item_id>/post_tag",methods=['GET','POST'])
 def post_tag(item_id):
@@ -508,7 +493,7 @@ def post_tag(item_id):
             else:l.append(content[i])
         taggee.append(str(''.join(l)).strip())
 
-        sql1 = "SELECT `mail_id` FROM person WHERE `fname` = (%s) AND `lname` = (%s)" 
+        sql1 = "SELECT `mail_id` FROM person WHERE `first_name` = (%s) AND `last_name` = (%s)" 
         sql2 = "INSERT into `tag`(`email_tagged`, `email_tagger`, `item_id`, `status`, `tagtime`) Values (%s, %s, %s, %s, %s)"
         sql3 = "SELECT `email_tagged`, `email_tagger`, `item_id` FROM `tag`"
         status = isAvailable(cursor, item_id)
@@ -533,18 +518,18 @@ def post_tag(item_id):
             #print(taggees_email)
             for j in taggees_email:
                 cursor.execute(sql3)
-                data = cursor.fetchall()
-                print("dup data", data)
-                newData = (j[0], session['user'], int(item_id))
-                print(type(newData))
+                store = cursor.fetchall()
+                print("repeat", store)
+                newstoredval = (j[0], session['user'], int(item_id))
+                print(type(newstoredval))
                 repeated = False
                 if len(taggees_email) > 1:
                     dup_name = True
                     dup_id = taggees_email
                     message = 'multiple people with same name D:'
                 else:
-                    for i in data:
-                        if ((i[0] == newData[0]) and (i[1] == newData[1]) and (i[2] == newData[2])):
+                    for i in store:
+                        if ((i[0] == newstoredval[0]) and (i[1] == newstoredval[1]) and (i[2] == newstoredval[2])):
                             repeated = True
                     print(repeated)
                     test = False
@@ -616,14 +601,14 @@ def isAvailable(cursor, item_id):
 
 
 def ContentSharedGroup(cursor, item_id):
-    sql_1 = "SELECT `fg_name` FROM share WHERE item_id = (%s)"
+    sql_1 = "SELECT `foreground_name` FROM share WHERE item_id = (%s)"
     cursor.execute(sql_1, item_id)
     sharedMembers = cursor.fetchall()
     members = MembersCalculate(cursor, sharedGroup) 
     return members
 
 def MembersCalculate(cursor, sharedGroup):
-    sql = "SELECT `mail_id` FROM belong WHERE `fg_name` = (%s)"
+    sql = "SELECT `mail_id` FROM belong WHERE `foreground_name` = (%s)"
     storage = []
     for group in sharedMembers:
         cursor.execute(sql, group[0])
