@@ -18,7 +18,7 @@ conn = pymysql.connect(host='127.0.0.1', user='devapp', database='ios')
 
 def checkUser():
     if 'user' not in session:
-        return redirect(url_for('login',error="login first"))
+        return redirect(url_for('login',error="login required"))
 
 def encrypt(hash_str):
     return hashlib.sha256(hash_str.encode()).hexdigest()
@@ -282,7 +282,6 @@ def GroupManagement():
 
 @app.route("/groups/fetch")
 def groupFetch():
-    print('fetching');
     if 'user' in session:
         cursor = conn.cursor()
         query_string = 'select belong.foreground_name,friendgroup.details,belong.owner_email from belong join friendgroup using(owner_email,foreground_name) where belong.email = (%s)'
@@ -345,19 +344,19 @@ def addFriend():
         return jsonify({"dup": token})
 
     if count == 1:
-        print("not in")
         token = token[0]
         sqlInsert = "insert into belong (mail_id, owner_email, foreground_name) values (%s, %s, %s)"
         cursor.execute(sqlInsert, (token, session['user'], foreground_name))
         conn.commit()
         cursor.close()
+	print("Error")
         message ="Congratulation! user " + first_name + " " + last_name +" SUCCESSFULLY added!"
         return jsonify({"added":message})
 
     if alreadyIn:
         message = "user " + first_name + " " + last_name + " is already in this group"
-        print("AlreadyIn")
         cursor.close()
+	print("Done")
         return jsonify({"alreadyIn": message})
 
     if count == 0:
@@ -375,7 +374,6 @@ def addFriendWithEmail():
     last_name = request.form['lastName']
     foreground_name = request.form['foreground_name']
     mail_id = request.form['mail_id']
-    print(first_name, last_name)
 
     sqlCheck = "select mail_id from person where first_name =(%s) and last_name = (%s)"
     cursor.execute(sqlCheck, (first_name, last_name, session['user'], foreground_name))
@@ -402,12 +400,11 @@ def removefriend():
     cursor.execute(sqlCount, (first_name,last_name, session["user"], foreground_name, session['user']))
     count = cursor.fetchone()
     count = count[0]
-    print("count: ",count)
     sqlEmail = "select email from person natural join belong where first_name = (%s) and last_name = (%s) and owner_email = (%s) and foreground_name=(%s) and email not in (%s)"
     cursor.execute(sqlEmail, (first_name, last_name, session["user"], foreground_name, session["user"]))
     token = cursor.fetchall()
     if count == 0:
-        print("0")
+        print("Done")
         cursor.close()
         return jsonify({"noUser":message})
     sqlAlreadyIn = "select first_name, last_name, mail_id from belong Natural join person where first_name=(%s) and last_name=(%s) and owner_email=(%s) and foreground_name=(%s)"
@@ -434,11 +431,9 @@ def removefriendwithemail():
     last_name = request.form['lastName']
     foreground_name = request.form['foreground_name']
     mail_id = request.form['mail_id']
-    print(first_name, last_name)
     sqlCheck = "select mail_id from person natural join belong where first_name = (%s) and last_name = (%s) and owner_email = (%s) and foreground_name=(%s) and email not in (%s)"
     cursor.execute(sqlCheck, (first_name, last_name, session['user'], foreground_name, session['user']))
     available = cursor.fetchall()
-    print("Given: ", mail_id)
     for i in range(len(available)):
         if available[i][0] == mail_id:
             sqlInsert = "delete FROM belong where mail_id = (%s) and owner_email = (%s)"
@@ -466,7 +461,6 @@ def type(item_id):
         cursor.close()
         return jsonify({'name':name,'type':content})
     elif request.method == 'GET':
-        print("hahah")
         query_string = "SELECT DISTINCT first_name,last_name,type,mail_id FROM type JOIN person USING(mail_id) where item_id=(%s)"
         cursor.execute(query_string,(item_id))
         store = cursor.fetchall()
@@ -497,7 +491,6 @@ def post_tag(item_id):
         sql2 = "INSERT into `tag`(`email_tagged`, `email_tagger`, `item_id`, `status`, `tagtime`) Values (%s, %s, %s, %s, %s)"
         sql3 = "SELECT `email_tagged`, `email_tagger`, `item_id` FROM `tag`"
         status = isAvailable(cursor, item_id)
-        print("status", status)
         if status == 1:
             sql = "SELECT mail_id FROM person"
             cursor.execute(sql)
@@ -510,18 +503,13 @@ def post_tag(item_id):
         repeated = False
 
         for i in taggee:
-            #print('user: '+ session['user'])
             space_index = taggee[0].find(' ')
-            #print(taggee[0][0 : space_index], taggee[0][space_index+1 : ])
             cursor.execute(sql1, (taggee[0][0 : space_index], taggee[0][space_index+1 : ]))
             taggees_email = cursor.fetchall()
-            #print(taggees_email)
             for j in taggees_email:
                 cursor.execute(sql3)
                 store = cursor.fetchall()
-                print("repeat", store)
                 newstoredval = (j[0], session['user'], int(item_id))
-                print(type(newstoredval))
                 repeated = False
                 if len(taggees_email) > 1:
                     dup_name = True
@@ -544,7 +532,6 @@ def post_tag(item_id):
                             cursor.execute(sql2, (j[0], session['user'], item_id, 1, timestamp))
                             conn.commit()
                         else:
-                            print('WHYYYYYYYYYY')
                             cursor.execute(sql2, (j[0], session['user'], item_id, 'Pending', timestamp))
                             conn.commit()
                         message = "Tagged!"
@@ -559,8 +546,8 @@ def tagEmail(item_id):
     message = 'Tagged!'
     mail_id = request.form['tag']
     cursor = conn.cursor()
-    ts = time.time()
-    timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    time_calc = time.time()
+    timestamp = datetime.datetime.fromtimestamp(time_calc).strftime('%Y-%m-%d %H:%M:%S')
     status = isAvailable(cursor, item_id)
     members = []
     print("status", status)
@@ -590,7 +577,6 @@ def tagEmail(item_id):
             message = 'Error'
     else:
         message = 'Error'
-    print("message2", message)
     return message
 
 def isAvailable(cursor, item_id):
@@ -616,7 +602,6 @@ def MembersCalculate(cursor, sharedGroup):
         for i in values:
             if i[0] not in storage:
                 storage.append(i[0])
-    print('storage', storage)
     return storage
 
 @app.route("/gallery")
@@ -638,7 +623,6 @@ def gallery():
 
 @app.route("/logout")
 def logout():
-    session.clear()
     return redirect(url_for('index'))
 
 if __name__ == "__main__":
