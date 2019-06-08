@@ -96,11 +96,9 @@
       function reject_tag(elem){
         var item_id = $(elem).attr('data-itemId');
         var tag_result = $(elem).attr('data-tag_result');
-        result.push(item_id);
         result.push(tag_result);
         var x = document.getElementById(tag_result + tag_result + String(item_id));
         x.style.display = "none";
-        update("denied");
       }
       function update(status){
         $.ajax({
@@ -109,7 +107,7 @@
             url: "/tag",
             },
             error: function(err){
-                alert("umm");
+                alert("out");
             }
         })
       }
