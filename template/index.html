@@ -1,1 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
 
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+    <meta name="details" content="">
+    <meta name="writer" content="">
+    <title>DevApp</title>
+    <link href="{{ url_for('static',filename='vendor/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-bright bg-bright static-top">
+      <div class="container">
+        <a class="navbar-brand" href="#">devApp</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="true" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item active">
+              <a class="nav-link" href="#">home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('P O S T ')}}">post</a>
+            </li>
+            {% if 'user' not in session %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('log in')}}">log in</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('signin')}}">sign up</a>
+            </li>
+            {% endif %}
+            {% if 'user' in session %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('Data App')}}">your groups</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('log out')}}">logout</a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12 text-center">
+          <h1 class="mt-5">DevApp</h1>
+          <p class="lead">Welcome</p>
+          <ul class="list-unstyled">
+            <li>Hrithik Vemparala</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="tag-container">
+      <p class="header">Tags:</p>
+      <ul>
+        {% for row in tag_data %}
+        <div class="tags" id={{row[0]}} data-itemId={{row[2]}} data-tag_result={{row[0]}} data-tagger={{row[1]}}>
+          <a href="/post/blog/{{row[2]|string}}" class="list-group-item list-group-item-action flex-column align-items-start">
+            <div class="d-flex w-100 content-between">
+              <h5 class="mb-1">{{row[1]}}</h5>
+              <p><small>{{row[1]}}</small></p>
+            </div>
+            <p class="mb-1">{{row[1]}} tags</p>
+          </a>
+          <div class="accept-or-deny" aria-label="Toolbar">
+            <button type="button" data-itemId={{row[2]}} data-tag_result={{row[0]}} data-tag_result={{row[1]}} class="btn btn-secondary" onclick="accept_tag(this)">Accept</button>
+            <button type="button" data-itemId={{row[2]}} data-tag_result={{row[0]}} data-tag_result={{row[1]}} class="btn btn-secondary" onclick="reject_tag(this)">Deny</button>
+          </div>
+        </div>
+        {% endfor %}
+    </ul>
+    </div>
+    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
+    <script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+    <script>
+    var decision = 1
+    Boolean (decision);
+    var result = new Array();
+      function accept_tag(elem){
+        var item_id = $(elem).attr('data-itemId');
+        var tag_result = $(elem).attr('data-tag_result');
+        var tag_result = $(elem).attr('data-tag_result');
+        result.push(item_id);
+        result.push(tag_result);
+        result.push(tag_result);
+        result.push(decision);
+        var x = document.getElementById(tag_result + tag_result + String(item_id));
+        x.style.display = "none";
+        update("done");
+      }
+      function reject_tag(elem){
+        var item_id = $(elem).attr('data-itemId');
+        var tag_result = $(elem).attr('data-tag_result');
+        result.push(item_id);
+        result.push(tag_result);
+        var x = document.getElementById(tag_result + tag_result + String(item_id));
+        x.style.display = "none";
+        update("denied");
+      }
+      function update(status){
+        $.ajax({
+            type:"POST",
+            data:{'data':result},
+            url: "/tag",
+            },
+            error: function(err){
+                alert("umm");
+            }
+        })
+      }
+    </script>
+  </body>
+</html>
